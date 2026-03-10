@@ -336,20 +336,34 @@ function buildQS(params) {
 
 async function sheetGet(params) {
   const url = SHEET_URL + '?' + buildQS(params);
-  const res = await fetch(url, { redirect: 'follow' });
+  const res = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    cache: 'no-cache'
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
 }
 
 async function addToSheet(tx) {
-  try {
-    const data = await sheetGet({
-      action: 'add', id: String(tx.id),
-      date: tx.date, cat: tx.cat, card: tx.card,
-      person: tx.person, amt: String(tx.amt), notes: tx.notes || '',
-      month: tx.month, pfm: tx.pfm || '', dueStatus: tx.dueStatus || ''
-    });
-    if (data.status === 'ok') showToast('✅ Saved to Google Sheet!');
-  } catch(e) { console.error('Sheet save error:', e); showToast('⚠️ Saved locally only', 'warn'); }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const data = await sheetGet({
+        action: 'add', id: String(tx.id),
+        date: tx.date, cat: tx.cat, card: tx.card,
+        person: tx.person, amt: String(tx.amt), notes: tx.notes || '',
+        month: tx.month, pfm: tx.pfm || '', dueStatus: tx.dueStatus || ''
+      });
+      if (data.status === 'ok') {
+        showToast('✅ Saved to Google Sheet!');
+        return;
+      }
+    } catch(e) {
+      console.error('Sheet save attempt ' + attempt + ' failed:', e.message);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  }
+  showToast('⚠️ Saved locally only', 'warn');
 }
 
 async function deleteFromSheet(id) {
@@ -428,16 +442,14 @@ async function addTransaction() {
   const fmtDate = d.toLocaleDateString('en-GB').split('/').join('-');
   const dueStatus = REFUND_CATS.includes(cat) ? (pfm ? `✓ Settled for ${pfm}` : '⚠ Month missing') : '';
 
-  const tx = { id: Date.now(), date: fmtDate, dateRaw: date, cat, amt, card, person, notes, month, pfm: pfm||'', dueStatus };
+  const tx = { id: Date.now() + '_' + Math.floor(Math.random()*99999), date: fmtDate, dateRaw: date, cat, amt, card, person, notes, month, pfm: pfm||'', dueStatus };
   transactions.push(tx);
 
   const btn = document.getElementById('submitBtn');
   btn.textContent = 'Saving...'; btn.disabled = true;
   await saveData();
-  addToSheet(tx); // fire and forget to Google Sheet
+  await addToSheet(tx);
   btn.textContent = '+ Add Transaction'; btn.disabled = false;
-
-  showToast('✅ Transaction saved!');
   resetForm();
 }
 
