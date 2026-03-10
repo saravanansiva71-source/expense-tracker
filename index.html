@@ -352,22 +352,45 @@ async function saveData() {
   try { localStorage.setItem('expense_transactions', JSON.stringify(transactions)); } catch(e) {}
 }
 
-// ── Google Sheets via fetch (works from hosted URL) ──
+// ── Google Sheets via JSONP (bypasses CORS completely) ──
 function buildQS(params) {
   return Object.entries(params)
     .map(([k,v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v == null ? '' : v))
     .join('&');
 }
 
-async function sheetGet(params) {
-  const url = SHEET_URL + '?' + buildQS(params);
-  const res = await fetch(url, {
-    method: 'GET',
-    redirect: 'follow',
-    cache: 'no-cache'
+function sheetGet(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'gsCallback_' + Date.now();
+    const qs = buildQS({ ...params, callback: cbName, t: Date.now() });
+    const url = SHEET_URL + '?' + qs;
+
+    const script = document.createElement('script');
+    script.src = url;
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Script load failed'));
+    };
+
+    document.head.appendChild(script);
   });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
 }
 
 async function addToSheet(tx) {
@@ -405,11 +428,8 @@ async function loadData() {
   if (txList) txList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Syncing from Google Sheet...</p></div>';
 
   try {
-    // Always load fresh from Google Sheet — single source of truth
-    const url = SHEET_URL + '?action=getAll&t=' + Date.now();
-    const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    // Always load fresh from Google Sheet via JSONP — bypasses CORS
+    const data = await sheetGet({ action: 'getAll' });
 
     if (data.rows && data.rows.length > 1) {
       transactions = data.rows.slice(1)
