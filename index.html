@@ -327,33 +327,28 @@ async function saveData() {
   try { localStorage.setItem('expense_transactions', JSON.stringify(transactions)); } catch(e) {}
 }
 
-// ── Google Sheets via GET params (works around CORS) ──
-function sheetGet(params) {
-  return new Promise((resolve, reject) => {
-    const qs = Object.entries(params)
-      .map(([k,v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v == null ? '' : v))
-      .join('&');
-    const url = SHEET_URL + '?' + qs;
+// ── Google Sheets via fetch (works from hosted URL) ──
+function buildQS(params) {
+  return Object.entries(params)
+    .map(([k,v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v == null ? '' : v))
+    .join('&');
+}
 
-    // Use an image tag — fires a GET request with no CORS restrictions
-    const img = new Image();
-    img.onload = img.onerror = () => resolve({ status: 'ok' });
-    img.src = url;
-
-    // Resolve after 4 seconds regardless
-    setTimeout(() => resolve({ status: 'ok' }), 4000);
-  });
+async function sheetGet(params) {
+  const url = SHEET_URL + '?' + buildQS(params);
+  const res = await fetch(url, { redirect: 'follow' });
+  return await res.json();
 }
 
 async function addToSheet(tx) {
   try {
-    await sheetGet({
+    const data = await sheetGet({
       action: 'add', id: String(tx.id),
       date: tx.date, cat: tx.cat, card: tx.card,
       person: tx.person, amt: String(tx.amt), notes: tx.notes || '',
       month: tx.month, pfm: tx.pfm || '', dueStatus: tx.dueStatus || ''
     });
-    showToast('✅ Saved to Google Sheet!');
+    if (data.status === 'ok') showToast('✅ Saved to Google Sheet!');
   } catch(e) { console.error('Sheet save error:', e); showToast('⚠️ Saved locally only', 'warn'); }
 }
 
