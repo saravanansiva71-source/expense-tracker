@@ -183,6 +183,7 @@ textarea { resize: none; height: 72px; }
   <div class="nav-item" onclick="showPage('entry')"><span class="ni">✏️</span><span>Add</span></div>
   <div class="nav-item" onclick="showPage('transactions')"><span class="ni">📋</span><span>History</span></div>
   <div class="nav-item" onclick="showPage('people')"><span class="ni">👥</span><span>People</span></div>
+  <div class="nav-item" onclick="syncNow()"><span class="ni">🔄</span><span>Sync</span></div>
 </nav>
 
 <!-- DASHBOARD -->
@@ -399,34 +400,50 @@ async function deleteFromSheet(id) {
 
 
 async function loadData() {
-  // Load from localStorage first for instant display
-  try {
-    const cached = localStorage.getItem('expense_transactions');
-    if (cached) transactions = JSON.parse(cached);
-  } catch(e) { transactions = []; }
+  // Show loading state
+  document.getElementById('txList').innerHTML = '<div class="loading"><div class="spinner"></div><p>Syncing from Google Sheet...</p></div>';
 
-  // Then try to sync from Google Sheet in background
   try {
-    const res = await fetch(SHEET_URL, { method: 'GET', mode: 'cors' });
-    const data = await res.json();
+    // Always load fresh from Google Sheet — this is the source of truth
+    const data = await sheetGet({ action: 'getAll' });
     if (data.rows && data.rows.length > 1) {
       transactions = data.rows.slice(1)
         .filter(r => r[0])
         .map(r => ({
-          id: parseInt(r[9]) || (Math.random()*1e13|0),
+          id: r[9] || (Date.now() + '_' + Math.floor(Math.random()*9999)),
           date: r[0]||'', cat: r[1]||'', card: r[2]||'',
           person: r[3]||'', amt: parseFloat(r[4])||0,
           notes: r[5]||'', month: r[6]||'',
           pfm: r[7]||'', dueStatus: r[8]||''
         }));
+      // Update local cache as backup
       localStorage.setItem('expense_transactions', JSON.stringify(transactions));
       showToast('✅ Synced from Google Sheet!');
-      renderDashboard();
-      renderTransactions();
+    } else {
+      // Empty sheet — no transactions yet
+      transactions = [];
+      localStorage.setItem('expense_transactions', JSON.stringify(transactions));
     }
   } catch(e) {
-    console.log('Background sync failed:', e.message);
+    console.log('Sheet load failed, using local cache:', e.message);
+    showToast('⚠️ Offline — showing local data', 'warn');
+    // Fallback to localStorage if sheet unreachable
+    try {
+      const cached = localStorage.getItem('expense_transactions');
+      if (cached) transactions = JSON.parse(cached);
+    } catch(e2) { transactions = []; }
   }
+
+  // Re-render everything with fresh data
+  renderDashboard();
+  renderTransactions();
+  renderPeople();
+}
+
+// Manual sync button
+async function syncNow() {
+  showToast('🔄 Syncing...', 'info');
+  await loadData();
 }
 
 // ── Category CSS class ──
