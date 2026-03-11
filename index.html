@@ -416,8 +416,12 @@ async function addToSheet(tx) {
 
 async function deleteFromSheet(id) {
   try {
-    await sheetGet({ action: 'delete', id: String(id) });
-  } catch(e) { console.error('Sheet delete error:', e); }
+    const data = await sheetGet({ action: 'delete', id: String(id) });
+    if (data.status === 'ok') console.log('Deleted from sheet:', id);
+  } catch(e) { 
+    console.error('Sheet delete error:', e);
+    showToast('⚠️ Delete may not have synced to Sheet', 'warn');
+  }
 }
 
 
@@ -576,14 +580,17 @@ function cardStatus(card, month) {
 }
 
 function personMonthlySpend(person, month) {
+  // Include all spending categories, exclude settlement/refund categories
+  const excludeCats = ['Cashback','CC Bill Payment','Card Refund','Cash Received','Card amount returned','Cash Returned','Credit card bill payment'];
   return transactions
-    .filter(t => t.person===person && t.month===month && !['Cashback','CC Bill Payment','Card Refund','Cash Received'].includes(t.cat))
+    .filter(t => t.person===person && t.month===month && !excludeCats.includes(t.cat))
     .reduce((s,t) => s+t.amt, 0);
 }
 
 function personReturnedThisMonth(person, month) {
+  const returnCats = ['Card Refund','Card amount returned','Cash Received','Cash Returned','CC Bill Payment','Credit card bill payment'];
   return transactions
-    .filter(t => t.person===person && t.pfm===month && (t.cat==='Card Refund'||t.cat==='Cash Received'||t.cat==='CC Bill Payment'))
+    .filter(t => t.person===person && t.pfm===month && returnCats.includes(t.cat))
     .reduce((s,t) => s+t.amt, 0);
 }
 
@@ -591,8 +598,10 @@ function personNetOutstanding(person) {
   if (person === 'Cashback') {
     return transactions.filter(t => t.person==='Cashback' && t.cat==='Income').reduce((s,t)=>s+t.amt,0);
   }
-  const lent = transactions.filter(t => t.person===person && (t.cat==='Cash Lent'||t.cat==='Card Spend')).reduce((s,t)=>s+t.amt,0);
-  const returned = transactions.filter(t => t.person===person && (t.cat==='Card Refund'||t.cat==='Cash Received')).reduce((s,t)=>s+t.amt,0);
+  const spendCats = ['Cash Lent','Cash Given','Card Spend','Card used','Expense','Online Spend','Online Purchase','Utilities'];
+  const returnCats = ['Card Refund','Card amount returned','Cash Received','Cash Returned'];
+  const lent = transactions.filter(t => t.person===person && spendCats.includes(t.cat)).reduce((s,t)=>s+t.amt,0);
+  const returned = transactions.filter(t => t.person===person && returnCats.includes(t.cat)).reduce((s,t)=>s+t.amt,0);
   return lent - returned;
 }
 
@@ -728,10 +737,10 @@ function renderTransactions() {
   // Attach delete listeners after rendering
   document.querySelectorAll('.tx-del').forEach(btn => {
     btn.addEventListener('click', async function() {
-      const id = parseInt(this.dataset.id);
-      transactions = transactions.filter(t => t.id !== id);
+      const id = this.dataset.id; // keep as string, don't parseInt
+      transactions = transactions.filter(t => String(t.id) !== String(id));
       await saveData();
-      deleteFromSheet(id); // fire and forget to Google Sheet
+      await deleteFromSheet(id);
       renderTransactions();
       showToast('🗑 Deleted');
     });
@@ -826,3 +835,4 @@ init();
 </script>
 </body>
 </html>
+
