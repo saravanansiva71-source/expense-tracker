@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Expense Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #0d0d14;
@@ -199,6 +200,7 @@ textarea { resize: none; height: 72px; }
   <div class="nav-item" onclick="showPage('transactions')"><span class="ni">📋</span><span>History</span></div>
   <div class="nav-item" onclick="showPage('people')"><span class="ni">👥</span><span>People</span></div>
   <div class="nav-item" onclick="syncNow()"><span class="ni">🔄</span><span>Sync</span></div>
+  <div class="nav-item" onclick="showPage('export')"><span class="ni">📥</span><span>Export</span></div>
 </nav>
 
 <!-- DASHBOARD -->
@@ -320,6 +322,43 @@ textarea { resize: none; height: 72px; }
       <select id="peopleMonth" onchange="renderPeople()"></select>
     </div>
     <div id="peopleSummary"></div>
+  </div>
+</div>
+
+<!-- EXPORT PAGE -->
+<div class="page" id="page-export">
+  <div class="page-header">
+    <h2>📥 Export</h2>
+    <p>Download your transactions as Excel</p>
+  </div>
+  <div style="padding:16px">
+
+    <!-- Step 1: Upload existing Excel -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">📂 Step 1 — Upload your Excel tracker</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Upload once. The app will add new entries to your existing Transactions sheet and download the updated file.</div>
+      <label style="display:block;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer" for="xlsxUpload">
+        <div style="font-size:24px;margin-bottom:6px">📄</div>
+        <div id="uploadLabel" style="font-size:12px;color:var(--text2)">Tap to upload your .xlsx file</div>
+      </label>
+      <input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="handleUpload(this)">
+      <div id="uploadStatus" style="margin-top:10px;font-size:12px;color:var(--green);display:none"></div>
+    </div>
+
+    <!-- Step 2: Append and download -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">📥 Step 2 — Append & Download</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Adds all entries from the app into your existing Excel file's Transactions sheet. Only adds rows that don't already exist (checks by ID).</div>
+      <button class="btn btn-primary" onclick="appendAndDownload()" id="appendBtn" disabled>⬇️ Append New Entries & Download</button>
+    </div>
+
+    <!-- Or fresh export -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">🆕 Or — Fresh Export</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Download a brand new Excel file with all current transactions (no existing file needed).</div>
+      <button class="btn" style="background:rgba(124,110,245,0.15);color:var(--accent);border:1px solid rgba(124,110,245,0.3)" onclick="exportTransactions()">⬇️ Download Fresh Transactions.xlsx</button>
+    </div>
+
   </div>
 </div>
 
@@ -510,8 +549,10 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const pages = ['dashboard','entry','transactions','people'];
-  document.querySelectorAll('.nav-item')[pages.indexOf(id)].classList.add('active');
+  const pages = ['dashboard','entry','transactions','people','sync','export'];
+  const idx = pages.indexOf(id);
+  if (idx >= 0 && idx < document.querySelectorAll('.nav-item').length)
+    document.querySelectorAll('.nav-item')[idx].classList.add('active');
   if (id==='dashboard') renderDashboard();
   if (id==='transactions') renderTransactions();
   if (id==='people') renderPeople();
@@ -877,6 +918,213 @@ function showToast(msg, type) {
   t.className = 'toast' + (type==='warn'?' warn': type==='info'?' info':'');
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// ── Export Functions ──
+function getMonthLabel() {
+  return new Date().toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-');
+}
+
+function buildTransactionRows() {
+  const headers = ['Date','Category','Paid Via','Person','Amount','Notes','Month','Payment For Month','Due Status'];
+  const rows = transactions.map(t => [
+    t.date, t.cat, t.card, t.person,
+    t.amt, t.notes||'', t.month,
+    t.pfm||'', t.dueStatus||''
+  ]);
+  return [headers, ...rows];
+}
+
+function buildPeopleRows() {
+  const month = document.getElementById('peopleMonth').value || getMonthLabel();
+  const headers = ['Person','Monthly Spend','Net Outstanding','Returned This Month','Status'];
+  const rows = PERSONS.map(p => {
+    if (p === 'Cashback') {
+      const cb = totalCashback();
+      return ['💎 Cashback', 0, cb, 0, 'Earned'];
+    }
+    const ms = personMonthlySpend(p, month);
+    const net = personNetOutstanding(p);
+    const ret = personReturnedThisMonth(p, month);
+    const st = personStatus(p, month);
+    return [p, ms, net, ret, st==='paid'?'Paid':st==='unpaid'?'Not Paid':'No Spend'];
+  });
+  return [headers, ...rows];
+}
+
+function applyExcelStyles(ws, isTransactions) {
+  const headerStyle = {
+    font: { bold: true, color: { rgb: 'FFFFFF' }, name: 'Arial', sz: 11 },
+    fill: { fgColor: { rgb: '3B3B8E' }, patternType: 'solid' },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+    }
+  };
+
+  // Style header row
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[cell]) ws[cell].s = headerStyle;
+  }
+
+  // Style data rows
+  for (let r = 1; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = XLSX.utils.encode_cell({ r, c });
+      if (!ws[cell]) continue;
+
+      const isEven = r % 2 === 0;
+      ws[cell].s = {
+        font: { name: 'Arial', sz: 10 },
+        fill: { fgColor: { rgb: isEven ? 'F5F5FF' : 'FFFFFF' }, patternType: 'solid' },
+        alignment: { vertical: 'center' },
+        border: {
+          top: { style: 'hair', color: { rgb: 'DDDDDD' } },
+          bottom: { style: 'hair', color: { rgb: 'DDDDDD' } },
+          left: { style: 'hair', color: { rgb: 'DDDDDD' } },
+          right: { style: 'hair', color: { rgb: 'DDDDDD' } }
+        }
+      };
+
+      // Color code categories (col B = index 1)
+      if (isTransactions && c === 1 && ws[cell].v) {
+        const cat = ws[cell].v;
+        let color = null;
+        if (['CC Bill Payment','Credit card bill payment'].includes(cat)) color = 'EAD1FB';
+        else if (['Card Refund','Card amount returned'].includes(cat)) color = 'DEEAF1';
+        else if (['Cash Received','Cash Returned'].includes(cat)) color = 'C6EFCE';
+        else if (['Cash Lent','Cash Given'].includes(cat)) color = 'FCE4D6';
+        else if (cat === 'Income') color = 'C6EFCE';
+        else if (cat === 'Expense') color = 'FFCCCC';
+        else if (cat === 'Loan Taken') color = 'FCE4D6';
+        else if (cat === 'Loan Repaid') color = 'C6EFCE';
+        if (color) ws[cell].s.fill = { fgColor: { rgb: color }, patternType: 'solid' };
+      }
+
+      // Color code amount (col E = index 4)
+      if (isTransactions && c === 4) {
+        const incCats = ['Income','Cash Received','Card Refund','Loan Repaid'];
+        const catCell = XLSX.utils.encode_cell({ r, c: 1 });
+        const cat = ws[catCell] ? ws[catCell].v : '';
+        ws[cell].s.font = { ...ws[cell].s.font, color: { rgb: incCats.includes(cat) ? '276221' : '9C0006' } };
+      }
+
+      // Status column color (people: col 4, transactions: col 8)
+      const statusCol = isTransactions ? 8 : 4;
+      if (c === statusCol && ws[cell].v) {
+        const val = String(ws[cell].v);
+        if (val === 'Paid' || val.includes('Settled')) ws[cell].s.fill = { fgColor: { rgb: 'C6EFCE' }, patternType: 'solid' };
+        else if (val === 'Not Paid') ws[cell].s.fill = { fgColor: { rgb: 'FFCCCC' }, patternType: 'solid' };
+      }
+    }
+  }
+
+  // Set column widths
+  const colWidths = isTransactions
+    ? [14, 22, 20, 15, 12, 25, 12, 20, 25]
+    : [18, 16, 18, 18, 14];
+  ws['!cols'] = colWidths.map(w => ({ wch: w }));
+  ws['!rows'] = [{ hpt: 20 }]; // header row height
+}
+
+// ── Upload & Append Logic ──
+let uploadedWorkbook = null;
+
+function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      uploadedWorkbook = XLSX.read(e.target.result, { type: 'array' });
+      document.getElementById('uploadLabel').textContent = '✅ ' + file.name;
+      document.getElementById('uploadStatus').style.display = 'block';
+      document.getElementById('uploadStatus').textContent = 'File loaded! Ready to append new entries.';
+      document.getElementById('appendBtn').disabled = false;
+    } catch(err) {
+      showToast('⚠️ Could not read file', 'warn');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function appendAndDownload() {
+  if (!uploadedWorkbook) { showToast('⚠️ Please upload your Excel file first', 'warn'); return; }
+  if (transactions.length === 0) { showToast('⚠️ No transactions in app', 'warn'); return; }
+
+  const wb = uploadedWorkbook;
+
+  // Get or create Transactions sheet
+  let wsName = wb.SheetNames.find(n => n.toLowerCase() === 'transactions') || wb.SheetNames[0];
+  let ws = wb.Sheets[wsName];
+
+  // Read existing rows to find existing IDs (column J = index 9)
+  const existing = XLSX.utils.sheet_to_json(ws, { header: 1 });
+  const existingIds = new Set(existing.slice(1).map(r => String(r[9] || '')).filter(Boolean));
+
+  // Find new transactions not already in sheet
+  const newRows = transactions.filter(t => !existingIds.has(String(t.id)));
+
+  if (newRows.length === 0) {
+    showToast('✅ No new entries — file is already up to date!', 'info');
+    return;
+  }
+
+  // If sheet is empty/no header, add header first
+  if (existing.length === 0) {
+    XLSX.utils.sheet_add_aoa(ws, [['Date','Category','Paid Via','Person','Amount','Notes','Month','Payment For Month','Due Status','ID']], { origin: 'A1' });
+  }
+
+  // Append new rows at bottom
+  const appendData = newRows.map(t => [
+    t.date, t.cat, t.card, t.person,
+    t.amt, t.notes||'', t.month,
+    t.pfm||'', t.dueStatus||'', t.id
+  ]);
+
+  const lastRow = existing.length || 1;
+  XLSX.utils.sheet_add_aoa(ws, appendData, { origin: { r: lastRow, c: 0 } });
+
+  // Download updated file
+  XLSX.writeFile(wb, 'expense_tracker_updated.xlsx');
+  showToast('✅ ' + newRows.length + ' new entries added & downloaded!');
+}
+
+function exportTransactions() {
+  if (transactions.length === 0) { showToast('⚠️ No transactions to export', 'warn'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(buildTransactionRows());
+  applyExcelStyles(ws, true);
+  XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+  XLSX.writeFile(wb, 'Transactions_' + getMonthLabel() + '.xlsx');
+  showToast('✅ Transactions.xlsx downloaded!');
+}
+
+function exportPeople() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(buildPeopleRows());
+  applyExcelStyles(ws, false);
+  XLSX.utils.book_append_sheet(wb, ws, 'People Summary');
+  XLSX.writeFile(wb, 'People_Summary_' + getMonthLabel() + '.xlsx');
+  showToast('✅ People_Summary.xlsx downloaded!');
+}
+
+function exportFull() {
+  if (transactions.length === 0) { showToast('⚠️ No transactions to export', 'warn'); return; }
+  const wb = XLSX.utils.book_new();
+  const wsTx = XLSX.utils.aoa_to_sheet(buildTransactionRows());
+  applyExcelStyles(wsTx, true);
+  XLSX.utils.book_append_sheet(wb, wsTx, 'Transactions');
+  const wsPeople = XLSX.utils.aoa_to_sheet(buildPeopleRows());
+  applyExcelStyles(wsPeople, false);
+  XLSX.utils.book_append_sheet(wb, wsPeople, 'People Summary');
+  XLSX.writeFile(wb, 'Expense_Export_' + getMonthLabel() + '.xlsx');
+  showToast('✅ Full_Export.xlsx downloaded!');
 }
 
 // ── Init ──
