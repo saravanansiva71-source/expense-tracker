@@ -450,24 +450,23 @@ function sheetGet(params) {
 }
 
 async function addToSheet(tx) {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const data = await sheetGet({
-        action: 'add', id: String(tx.id),
-        date: tx.date, cat: tx.cat, card: tx.card,
-        person: tx.person, amt: String(tx.amt), notes: tx.notes || '',
-        month: tx.month, pfm: tx.pfm || '', dueStatus: tx.dueStatus || ''
-      });
-      if (data.status === 'ok') {
-        showToast('✅ Saved to Google Sheet!');
-        return;
-      }
-    } catch(e) {
-      console.error('Sheet save attempt ' + attempt + ' failed:', e.message);
-      if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+  // Single attempt only — retries cause duplicate entries in Sheet
+  try {
+    const data = await sheetGet({
+      action: 'add', id: String(tx.id),
+      date: tx.date, cat: tx.cat, card: tx.card,
+      person: tx.person, amt: String(tx.amt), notes: tx.notes || '',
+      month: tx.month, pfm: tx.pfm || '', dueStatus: tx.dueStatus || ''
+    });
+    if (data.status === 'ok') {
+      showToast('✅ Saved to Google Sheet!');
+    } else {
+      showToast('⚠️ Saved locally only', 'warn');
     }
+  } catch(e) {
+    console.error('Sheet save failed:', e.message);
+    showToast('⚠️ Saved locally only', 'warn');
   }
-  showToast('⚠️ Saved locally only', 'warn');
 }
 
 async function deleteFromSheet(id) {
