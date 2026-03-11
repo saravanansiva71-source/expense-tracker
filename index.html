@@ -109,6 +109,8 @@ textarea { resize: none; height: 72px; }
 .pill[data-c="Income"].sel, .pill[data-c="Cash Received"].sel, .pill[data-c="Card Refund"].sel { border-color: var(--green); background: rgba(74,222,128,0.12); }
 .pill[data-c="Cash Lent"].sel, .pill[data-c="Card Spend"].sel, .pill[data-c="Expense"].sel { border-color: var(--orange); background: rgba(251,146,60,0.12); }
 .pill[data-c="CC Bill Payment"].sel { border-color: var(--purple); background: rgba(167,139,250,0.12); }
+.pill[data-c="Loan Taken"].sel  { border-color: #f472b6; background: rgba(244,114,182,0.12); }
+.pill[data-c="Loan Repaid"].sel { border-color: var(--green); background: rgba(74,222,128,0.12); }
 
 .cond-field { display: none; background: rgba(124,110,245,0.07); border: 1px dashed rgba(124,110,245,0.35); border-radius: var(--radius-sm); padding: 13px; margin-bottom: 14px; }
 .cond-field.show { display: block; }
@@ -141,6 +143,10 @@ textarea { resize: none; height: 72px; }
 .tx-card.cat-cash-received { border-left-color: var(--green);   background: rgba(74,222,128,0.04); }
 .tx-card.cat-cashback      { border-left-color: var(--green);   background: rgba(74,222,128,0.04); }
 .tx-cat.cat-cashback       { background: rgba(74,222,128,0.15);  color: var(--green); }
+.tx-card.cat-loan-taken    { border-left-color: #f472b6;         background: rgba(244,114,182,0.05); }
+.tx-cat.cat-loan-taken     { background: rgba(244,114,182,0.15); color: #f472b6; }
+.tx-card.cat-loan-repaid   { border-left-color: var(--green);    background: rgba(74,222,128,0.04); }
+.tx-cat.cat-loan-repaid    { background: rgba(74,222,128,0.15);  color: var(--green); }
 
 /* CATEGORY BADGE COLORS */
 .tx-cat.cat-expense       { background: rgba(255,107,138,0.15); color: var(--accent2); }
@@ -232,6 +238,8 @@ textarea { resize: none; height: 72px; }
         <div class="pill" data-c="Utilities" onclick="selCat(this)"><span class="pi">⚡</span>Utilities</div>
         <div class="pill" data-c="Cash Lent" onclick="selCat(this)"><span class="pi">🤝</span>Cash Lent</div>
         <div class="pill" data-c="Cash Received" onclick="selCat(this)"><span class="pi">✅</span>Cash Received</div>
+        <div class="pill" data-c="Loan Taken" onclick="selCat(this)"><span class="pi">🏧</span>Loan Taken</div>
+        <div class="pill" data-c="Loan Repaid" onclick="selCat(this)"><span class="pi">💸</span>Loan Repaid</div>
       </div>
       <input type="hidden" id="fCat">
     </div>
@@ -514,7 +522,8 @@ function selCat(el) {
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('sel'));
   el.classList.add('sel');
   document.getElementById('fCat').value = el.dataset.c;
-  document.getElementById('pfmField').classList.toggle('show', REFUND_CATS.includes(el.dataset.c));
+  const showPfm = REFUND_CATS.includes(el.dataset.c) || el.dataset.c === 'Loan Repaid';
+  document.getElementById('pfmField').classList.toggle('show', showPfm);
 }
 
 // ── Add transaction ──
@@ -590,7 +599,7 @@ function cardStatus(card, month) {
 
 function personMonthlySpend(person, month) {
   // Include all spending categories, exclude settlement/refund categories
-  const excludeCats = ['Cashback','CC Bill Payment','Card Refund','Cash Received','Card amount returned','Cash Returned','Credit card bill payment'];
+  const excludeCats = ['Cashback','CC Bill Payment','Card Refund','Cash Received','Card amount returned','Cash Returned','Credit card bill payment','Loan Taken','Loan Repaid'];
   return transactions
     .filter(t => t.person===person && t.month===month && !excludeCats.includes(t.cat))
     .reduce((s,t) => s+t.amt, 0);
@@ -609,9 +618,14 @@ function personNetOutstanding(person) {
   }
   const spendCats = ['Cash Lent','Cash Given','Card Spend','Card used','Expense','Online Spend','Online Purchase','Utilities'];
   const returnCats = ['Card Refund','Card amount returned','Cash Received','Cash Returned'];
+  // Loan Taken = person lent to you (you owe them) → negative outstanding
+  // Loan Repaid = you repaid the person → reduces what you owe
   const lent = transactions.filter(t => t.person===person && spendCats.includes(t.cat)).reduce((s,t)=>s+t.amt,0);
   const returned = transactions.filter(t => t.person===person && returnCats.includes(t.cat)).reduce((s,t)=>s+t.amt,0);
-  return lent - returned;
+  const loanTaken = transactions.filter(t => t.person===person && t.cat==='Loan Taken').reduce((s,t)=>s+t.amt,0);
+  const loanRepaid = transactions.filter(t => t.person===person && t.cat==='Loan Repaid').reduce((s,t)=>s+t.amt,0);
+  // net: positive = they owe you, negative = you owe them
+  return (lent - returned) - (loanTaken - loanRepaid);
 }
 
 function personStatus(person, month) {
@@ -703,6 +717,8 @@ function catClass(cat) {
     'Cash Given': 'cat-cash-lent',
     'Cash Received': 'cat-cash-received',
     'Cash Returned': 'cat-cash-received',
+    'Loan Taken':  'cat-loan-taken',
+    'Loan Repaid': 'cat-loan-repaid',
   };
   return map[cat] || '';
 }
@@ -875,4 +891,3 @@ init();
 </script>
 </body>
 </html>
-
