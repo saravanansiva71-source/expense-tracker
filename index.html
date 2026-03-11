@@ -74,6 +74,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .card-row { grid-template-columns: 1.8fr 1fr 1fr 0.8fr; }
 /* Person summary cols: name | monthly | net | returned | remaining */
 .person-row { grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr; }
+.person-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; margin-bottom: 8px; border-left: 3px solid var(--border); }
+.person-card.paid { border-left-color: var(--green); background: rgba(74,222,128,0.04); }
+.person-card.unpaid { border-left-color: var(--accent2); background: rgba(255,107,138,0.04); }
+.person-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.person-name { font-size: 14px; font-weight: 700; }
+.person-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.person-stat { text-align: center; }
+.person-stat .ps-label { font-size: 9px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+.person-stat .ps-value { font-size: 13px; font-weight: 800; letter-spacing: -0.3px; }
 
 /* STATUS BADGES */
 .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
@@ -759,59 +768,90 @@ function renderPeople() {
   const month = document.getElementById('peopleMonth').value;
   const container = document.getElementById('peopleSummary');
 
-  const rows = PERSONS.map((p,i) => {
-    const ms = p==='Cashback' ? 0 : personMonthlySpend(p, month);
-    const net = personNetOutstanding(p);
-    const ret = personReturnedThisMonth(p, month);
-    const st = p==='Cashback' ? 'nospend' : personStatus(p, month);
-
-    const rowStyle = st==='paid'
-      ? 'style="background:rgba(74,222,128,0.06);border-left:3px solid var(--green)"'
-      : st==='unpaid' && ms>0
-      ? 'style="background:rgba(255,107,138,0.06);border-left:3px solid var(--accent2)"'
-      : i%2===0 ? '' : 'style="background:var(--surface2)"';
-
-    if (p === 'Cashback') {
-      return `<div class="summary-row person-row" style="background:rgba(74,222,128,0.06);border-left:3px solid var(--green)">
-        <div class="cell bold" style="font-size:11px">💎 Cashback</div>
-        <div class="cell mono right" style="color:var(--green)">${fmtAmt(net)}</div>
-        <div class="cell mono right" style="color:var(--text2)">—</div>
-        <div class="cell mono right" style="color:var(--text2)">—</div>
-        <div class="cell center"><span class="badge paid">Earned</span></div>
-      </div>`;
-    }
-
-    return `<div class="summary-row person-row" ${rowStyle}>
-      <div class="cell bold" style="font-size:11px">${p}</div>
-      <div class="cell mono right" style="color:${ms>0?'var(--text)':'var(--text2)'}">${ms>0?fmtAmt(ms):'—'}</div>
-      <div class="cell mono right" style="color:${net>0?'var(--orange)':net<0?'var(--green)':'var(--text2)'}">${net!==0?fmtAmt(net):'—'}</div>
-      <div class="cell mono right" style="color:${ret>0?'var(--green)':'var(--text2)'}">${ret>0?fmtAmt(ret):'—'}</div>
-      <div class="cell center"><span class="badge ${st}">${st==='paid'?'✓ Paid':st==='unpaid'?'✗ Unpaid':'—'}</span></div>
-    </div>`;
-  }).join('');
-
   const totalMs = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+personMonthlySpend(p,month),0);
   const totalNet = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+Math.max(0,personNetOutstanding(p)),0);
   const totalRet = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+personReturnedThisMonth(p,month),0);
+  const cb = totalCashback();
 
-  container.innerHTML = `
-    <div class="summary-card">
-      <div class="summary-row person-row header-row">
-        <div class="cell bold" style="font-size:10px;color:var(--text2)">PERSON</div>
-        <div class="cell bold right" style="font-size:10px;color:var(--text2)">MONTHLY</div>
-        <div class="cell bold right" style="font-size:10px;color:var(--text2)">NET DUE</div>
-        <div class="cell bold right" style="font-size:10px;color:var(--text2)">RETURNED</div>
-        <div class="cell bold center" style="font-size:10px;color:var(--text2)">STATUS</div>
+  // Cashback card first
+  const cashbackCard = `
+    <div class="person-card paid">
+      <div class="person-card-top">
+        <span class="person-name">💎 Cashback</span>
+        <span class="badge paid">Earned</span>
       </div>
-      ${rows}
-      <div class="summary-row person-row total-row">
-        <div class="cell bold">TOTAL</div>
-        <div class="cell mono right">${fmtAmt(totalMs)}</div>
-        <div class="cell mono right">${fmtAmt(totalNet)}</div>
-        <div class="cell mono right">${fmtAmt(totalRet)}</div>
-        <div class="cell"></div>
+      <div class="person-stats">
+        <div class="person-stat">
+          <div class="ps-label">Total Earned</div>
+          <div class="ps-value" style="color:var(--green)">${fmtAmt(cb)}</div>
+        </div>
+        <div class="person-stat"><div class="ps-label">Monthly</div><div class="ps-value" style="color:var(--text2)">—</div></div>
+        <div class="person-stat"><div class="ps-label">Returned</div><div class="ps-value" style="color:var(--text2)">—</div></div>
       </div>
     </div>`;
+
+  // Person cards
+  const personCards = PERSONS.filter(p=>p!=='Cashback').map(p => {
+    const ms = personMonthlySpend(p, month);
+    const net = personNetOutstanding(p);
+    const ret = personReturnedThisMonth(p, month);
+    const st = personStatus(p, month);
+
+    if (ms === 0 && net === 0 && ret === 0) return ''; // hide people with no activity
+
+    const cardClass = st==='paid' ? 'paid' : st==='unpaid' ? 'unpaid' : '';
+    const netColor = net > 0 ? 'var(--orange)' : net < 0 ? 'var(--green)' : 'var(--text2)';
+    const badge = st==='paid'
+      ? `<span class="badge paid">✓ Paid</span>`
+      : st==='unpaid'
+      ? `<span class="badge unpaid">✗ Unpaid</span>`
+      : `<span class="badge nospend">No Spend</span>`;
+
+    return `<div class="person-card ${cardClass}">
+      <div class="person-card-top">
+        <span class="person-name">👤 ${p}</span>
+        ${badge}
+      </div>
+      <div class="person-stats">
+        <div class="person-stat">
+          <div class="ps-label">This Month</div>
+          <div class="ps-value" style="color:${ms>0?'var(--accent2)':'var(--text2)'}">${ms>0?fmtAmt(ms):'—'}</div>
+        </div>
+        <div class="person-stat">
+          <div class="ps-label">Net Due</div>
+          <div class="ps-value" style="color:${netColor}">${net!==0?fmtAmt(net):'—'}</div>
+        </div>
+        <div class="person-stat">
+          <div class="ps-label">Returned</div>
+          <div class="ps-value" style="color:${ret>0?'var(--green)':'var(--text2)'}">${ret>0?fmtAmt(ret):'—'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Total summary card
+  const totalCard = `
+    <div class="person-card" style="background:rgba(124,110,245,0.08);border-left-color:var(--accent)">
+      <div class="person-card-top">
+        <span class="person-name" style="color:var(--accent)">📊 TOTAL</span>
+      </div>
+      <div class="person-stats">
+        <div class="person-stat">
+          <div class="ps-label">This Month</div>
+          <div class="ps-value" style="color:var(--accent2)">${fmtAmt(totalMs)}</div>
+        </div>
+        <div class="person-stat">
+          <div class="ps-label">Net Due</div>
+          <div class="ps-value" style="color:var(--orange)">${fmtAmt(totalNet)}</div>
+        </div>
+        <div class="person-stat">
+          <div class="ps-label">Returned</div>
+          <div class="ps-value" style="color:var(--green)">${fmtAmt(totalRet)}</div>
+        </div>
+      </div>
+    </div>`;
+
+  container.innerHTML = cashbackCard + personCards + totalCard;
 }
 
 // ── Toast ──
