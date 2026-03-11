@@ -540,7 +540,7 @@ async function addTransaction() {
 
   const d = new Date(date);
   const month = d.toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-');
-  const fmtDate = d.toLocaleDateString('en-GB').split('/').join('-');
+  const fmtDate = d.toLocaleDateString('en-GB'); // DD/MM/YYYY format
   const dueStatus = REFUND_CATS.includes(cat) ? (pfm ? `✓ Settled for ${pfm}` : '⚠ Month missing') : '';
 
   const tx = { id: Date.now() + '_' + Math.floor(Math.random()*99999), date: fmtDate, dateRaw: date, cat, amt, card, person, notes, month, pfm: pfm||'', dueStatus };
