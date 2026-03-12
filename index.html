@@ -112,6 +112,7 @@ textarea { resize: none; height: 72px; }
 .pill[data-c="CC Bill Payment"].sel { border-color: var(--purple); background: rgba(167,139,250,0.12); }
 .pill[data-c="Loan Taken"].sel  { border-color: #f472b6; background: rgba(244,114,182,0.12); }
 .pill[data-c="Loan Repaid"].sel { border-color: var(--green); background: rgba(74,222,128,0.12); }
+.pill[data-c="Convenience Fee"].sel { border-color: #fbbf24; background: rgba(251,191,36,0.12); }
 
 .cond-field { display: none; background: rgba(124,110,245,0.07); border: 1px dashed rgba(124,110,245,0.35); border-radius: var(--radius-sm); padding: 13px; margin-bottom: 14px; }
 .cond-field.show { display: block; }
@@ -148,6 +149,8 @@ textarea { resize: none; height: 72px; }
 .tx-cat.cat-loan-taken     { background: rgba(244,114,182,0.15); color: #f472b6; }
 .tx-card.cat-loan-repaid   { border-left-color: var(--green);    background: rgba(74,222,128,0.04); }
 .tx-cat.cat-loan-repaid    { background: rgba(74,222,128,0.15);  color: var(--green); }
+.tx-card.cat-conv-fee      { border-left-color: #fbbf24;         background: rgba(251,191,36,0.05); }
+.tx-cat.cat-conv-fee       { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 
 /* CATEGORY BADGE COLORS */
 .tx-cat.cat-expense       { background: rgba(255,107,138,0.15); color: var(--accent2); }
@@ -242,6 +245,7 @@ textarea { resize: none; height: 72px; }
         <div class="pill" data-c="Cash Received" onclick="selCat(this)"><span class="pi">✅</span>Cash Received</div>
         <div class="pill" data-c="Loan Taken" onclick="selCat(this)"><span class="pi">🏧</span>Loan Taken</div>
         <div class="pill" data-c="Loan Repaid" onclick="selCat(this)"><span class="pi">💸</span>Loan Repaid</div>
+        <div class="pill" data-c="Convenience Fee" onclick="selCat(this)"><span class="pi">🏷️</span>Convenience Fee</div>
       </div>
       <input type="hidden" id="fCat">
     </div>
@@ -639,7 +643,7 @@ function cardStatus(card, month) {
 
 function personMonthlySpend(person, month) {
   // Include all spending categories, exclude settlement/refund categories
-  const excludeCats = ['Cashback','CC Bill Payment','Card Refund','Cash Received','Card amount returned','Cash Returned','Credit card bill payment','Loan Taken','Loan Repaid'];
+  const excludeCats = ['Cashback','CC Bill Payment','Card Refund','Cash Received','Card amount returned','Cash Returned','Credit card bill payment','Loan Taken','Loan Repaid','Convenience Fee'];
   return transactions
     .filter(t => t.person===person && t.month===month && !excludeCats.includes(t.cat))
     .reduce((s,t) => s+t.amt, 0);
@@ -759,6 +763,7 @@ function catClass(cat) {
     'Cash Returned': 'cat-cash-received',
     'Loan Taken':  'cat-loan-taken',
     'Loan Repaid': 'cat-loan-repaid',
+    'Convenience Fee': 'cat-conv-fee',
   };
   return map[cat] || '';
 }
@@ -1138,3 +1143,4 @@ init();
 </script>
 </body>
 </html>
+
