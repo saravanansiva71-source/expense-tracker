@@ -1047,15 +1047,9 @@ function renderTransactions() {
         ${t.notes?`<span>📝 ${t.notes}</span>`:''}
         ${t.pfm?`<span>🗓 For ${t.pfm}</span>`:''}
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="tx-edit" data-id="${t.id}">✏️ Edit</button>
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button class="tx-edit" data-id="${t.id}">✏️ Edit</button>
-          <div style="display:flex;gap:8px;margin-top:10px">
+      <div style="display:flex;gap:8px;margin-top:10px">
         <button class="tx-edit" data-id="${t.id}">✏️ Edit</button>
         <button class="tx-del" data-id="${t.id}">🗑 Delete</button>
-      </div>
-        </div>
       </div>
     </div>`;
   }).join('');
