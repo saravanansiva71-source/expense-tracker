@@ -87,17 +87,48 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-cancel { background:var(--surface2);color:var(--text2);border:1px solid var(--border) !important; }
 /* Option C — person row styles */
 .person-row-item { display:flex; gap:10px; margin-bottom:8px; align-items:flex-start; }
-.person-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; margin-top:2px; }
-.person-body { flex:1; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius); padding:10px 13px; }
-.person-body.paid { border-left-color:var(--green); background:rgba(74,222,128,0.04); }
-.person-body.unpaid { border-left-color:var(--accent2); background:rgba(255,107,138,0.04); }
-.person-body.nospend { opacity:0.5; }
-.person-row-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
-.person-name { font-size:14px; font-weight:700; }
-.person-amt { font-size:15px; font-weight:800; letter-spacing:-0.3px; }
-.person-meta { font-size:11px; color:var(--text2); margin-bottom:7px; line-height:1.5; }
-.person-progress { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
-.person-progress-fill { height:3px; border-radius:2px; transition:width 0.5s ease; }
+.person-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; margin-top:2px; }
+.person-body { flex:1; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+.person-body.paid { border-left-color:var(--green); background:rgba(74,222,128,0.07); }
+.person-body.unpaid { border-left-color:var(--accent2); background:rgba(255,107,138,0.07); }
+.person-body.nospend { opacity:0.45; }
+.person-row-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.person-name { font-size:15px; font-weight:700; color:var(--text); }
+.person-amt { font-size:16px; font-weight:800; letter-spacing:-0.3px; }
+.person-meta { font-size:12px; color:#aaaacc; margin-bottom:8px; line-height:1.6; }
+.person-progress { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.person-progress-fill { height:4px; border-radius:2px; transition:width 0.5s ease; }
+
+/* DASHBOARD OPTION A */
+.dash-topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 16px 12px; background:var(--surface); border-bottom:1px solid var(--border); }
+.dash-title { font-size:17px; font-weight:800; color:var(--text); }
+.dash-month-sel { background:var(--surface2); border:1px solid var(--border); border-radius:20px; color:var(--accent); font-family:'DM Mono',monospace; font-size:13px; font-weight:700; padding:5px 12px; outline:none; cursor:pointer; }
+.dash-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; margin-top:14px; position:relative; overflow:hidden; }
+.dash-hero-glow { position:absolute; right:-20px; top:-20px; width:100px; height:100px; border-radius:50%; background:rgba(124,110,245,0.07); pointer-events:none; }
+.dash-hero-lbl { font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+.dash-hero-amt { font-size:32px; font-weight:800; color:var(--text); letter-spacing:-1.5px; line-height:1; }
+.dash-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.dash-chip { font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; }
+.dash-chip.green { background:rgba(74,222,128,0.12); color:var(--green); }
+.dash-chip.orange { background:rgba(251,146,60,0.12); color:var(--orange); }
+.dash-chip.purple { background:rgba(124,110,245,0.12); color:var(--accent); }
+.dash-chip.red { background:rgba(255,107,138,0.12); color:var(--accent2); }
+.dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.dash-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 13px; }
+.dash-stat .ds-lbl { font-size:10px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+.dash-stat .ds-val { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+.dash-section-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.dash-toggle-btn { font-size:11px; font-weight:600; padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; }
+.dash-toggle-btn.active { background:rgba(124,110,245,0.12); color:var(--accent); border-color:var(--accent); }
+.dash-card-row { display:flex; align-items:center; gap:10px; padding:10px 13px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:6px; }
+.dash-card-row.paid { border-left:3px solid var(--green); background:rgba(74,222,128,0.05); }
+.dash-card-row.unpaid { border-left:3px solid var(--accent2); background:rgba(255,107,138,0.05); }
+.dcr-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.dcr-name { flex:1; font-size:13px; font-weight:600; color:var(--text); }
+.dcr-amt { font-size:13px; font-weight:800; color:var(--text); margin-right:6px; }
+.dash-total-row { display:flex; justify-content:space-between; align-items:center; padding:11px 13px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-top:4px; }
+.dash-total-lbl { font-size:12px; font-weight:700; color:var(--text2); }
+.dash-total-amt { font-size:15px; font-weight:800; color:var(--text); }
 
 /* STATUS BADGES */
 .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
@@ -236,19 +267,18 @@ textarea { resize: none; height: 72px; }
 
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-  <div class="page-header">
-    <h2>📊 Dashboard</h2>
-    <p>Your financial overview</p>
+  <div class="dash-topbar">
+    <span class="dash-title">Dashboard</span>
+    <select id="dashMonth" onchange="renderDashboard()" class="dash-month-sel"></select>
   </div>
-  <div style="padding:16px">
-    <div class="month-bar">
-      <label>Month:</label>
-      <select id="dashMonth" onchange="renderDashboard()"></select>
+  <div style="padding:0 16px 16px">
+    <div id="dashHero"></div>
+    <div class="dash-grid" id="statGrid"></div>
+    <div class="dash-section-row">
+      <div class="section-title" style="margin-bottom:0">Cards this month</div>
+      <button id="toggleNoSpendBtn" onclick="toggleNoSpend()" class="dash-toggle-btn">Show no-spend</button>
     </div>
-    <div id="cashbackBanner"></div>
-    <div class="stat-grid" id="statGrid"></div>
-    <div class="section-title">Card-wise Summary</div>
-    <div class="summary-card" id="cardSummary"></div>
+    <div id="cardSummary"></div>
   </div>
 </div>
 
@@ -828,6 +858,17 @@ function totalCashback() {
 }
 
 // ── Dashboard ──
+// ── Dashboard toggle ──
+let showNoSpend = false;
+
+function toggleNoSpend() {
+  showNoSpend = !showNoSpend;
+  const btn = document.getElementById('toggleNoSpendBtn');
+  btn.textContent = showNoSpend ? 'Hide no-spend' : 'Show no-spend';
+  btn.classList.toggle('active', showNoSpend);
+  renderDashboard();
+}
+
 function renderDashboard() {
   const month = document.getElementById('dashMonth').value;
   const cb = totalCashback();
@@ -835,56 +876,62 @@ function renderDashboard() {
   const totalOutstanding = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+Math.max(0,personNetOutstanding(p)),0);
   const paidCards = CARDS.filter(c => cardStatus(c,month)==='paid').length;
   const unpaidCards = CARDS.filter(c => cardStatus(c,month)==='unpaid').length;
+  const totalIncome = transactions.filter(t=>t.month===month && t.cat==='Income').reduce((s,t)=>s+t.amt,0);
 
-  // Cashback banner
-  document.getElementById('cashbackBanner').innerHTML = `
-    <div class="cashback-banner">
-      <div><div class="cb-label">💎 Total Cashback Accumulated</div><div style="font-size:11px;color:var(--text2);margin-top:2px">All time earnings</div></div>
-      <div class="cb-value">${fmtAmt(cb)}</div>
+  // ── Hero card ──
+  const chips = [];
+  if (cb > 0)             chips.push(`<span class="dash-chip green">₹${fmtN(cb)} cashback</span>`);
+  if (totalOutstanding>0) chips.push(`<span class="dash-chip orange">₹${fmtN(totalOutstanding)} outstanding</span>`);
+  if (paidCards>0)        chips.push(`<span class="dash-chip purple">${paidCards} paid · ${unpaidCards} unpaid</span>`);
+  if (totalIncome>0)      chips.push(`<span class="dash-chip green">₹${fmtN(totalIncome)} income</span>`);
+
+  document.getElementById('dashHero').innerHTML = `
+    <div class="dash-hero">
+      <div class="dash-hero-glow"></div>
+      <div class="dash-hero-lbl">Total spend this month</div>
+      <div class="dash-hero-amt">${fmtAmt(totalSpendMonth)}</div>
+      <div class="dash-chips">${chips.join('')}</div>
     </div>`;
 
-  // Stat cards
+  // ── Stat grid ──
   document.getElementById('statGrid').innerHTML = `
-    <div class="stat-card"><div class="label">📅 Monthly Spend</div><div class="value red">${fmtAmt(totalSpendMonth)}</div></div>
-    <div class="stat-card"><div class="label">⚠️ Net Outstanding</div><div class="value orange">${fmtAmt(totalOutstanding)}</div></div>
-    <div class="stat-card"><div class="label">✅ Cards Paid</div><div class="value green">${paidCards} / ${CARDS.length}</div></div>
-    <div class="stat-card"><div class="label">❌ Cards Unpaid</div><div class="value red">${unpaidCards}</div></div>`;
+    <div class="dash-stat"><div class="ds-lbl">Net outstanding</div><div class="ds-val" style="color:var(--orange)">${fmtAmt(totalOutstanding)}</div></div>
+    <div class="dash-stat"><div class="ds-lbl">Cards paid</div><div class="ds-val" style="color:var(--green)">${paidCards} / ${CARDS.length}</div></div>
+    <div class="dash-stat"><div class="ds-lbl">Total cashback</div><div class="ds-val" style="color:var(--green)">${fmtAmt(cb)}</div></div>
+    <div class="dash-stat"><div class="ds-lbl">Cards unpaid</div><div class="ds-val" style="color:var(--accent2)">${unpaidCards}</div></div>`;
 
-  // Card-wise summary with color coded status rows
-  const cardRows = CARDS.map((card,i) => {
+  // ── Card rows ──
+  const visibleCards = CARDS.filter(c => showNoSpend || cardStatus(c,month) !== 'nospend');
+  const cardRows = visibleCards.map(card => {
     const ms = monthlySpend(card, month);
-    const ts = totalSpend(card);
     const st = cardStatus(card, month);
-    const rowBg = st==='paid'
-      ? 'style="background:rgba(74,222,128,0.06);border-left:3px solid var(--green)"'
+    const dotColor = st==='paid' ? 'var(--green)' : st==='unpaid' ? 'var(--accent2)' : 'var(--border)';
+    const rowClass = st==='paid' ? 'paid' : st==='unpaid' ? 'unpaid' : '';
+    const badge = st==='paid'
+      ? `<span class="badge paid">✓ Paid</span>`
       : st==='unpaid'
-      ? 'style="background:rgba(255,107,138,0.06);border-left:3px solid var(--accent2)"'
-      : i%2===0 ? '' : 'style="background:var(--surface2)"';
-    return `<div class="summary-row card-row" ${rowBg}>
-      <div class="cell bold" style="font-size:11px">${card}</div>
-      <div class="cell mono right ${st==='unpaid'?'style="color:var(--accent2)"':''}">${fmtAmt(ms)}</div>
-      <div class="cell mono right" style="color:var(--text2)">${fmtAmt(ts)}</div>
-      <div class="cell center"><span class="badge ${st}">${st==='paid'?'✓ Paid':st==='unpaid'?'✗ Unpaid':'— None'}</span></div>
+      ? `<span class="badge unpaid">✗ Unpaid</span>`
+      : `<span class="badge nospend">— None</span>`;
+    return `<div class="dash-card-row ${rowClass}">
+      <div class="dcr-dot" style="background:${dotColor}"></div>
+      <span class="dcr-name">${card}</span>
+      <span class="dcr-amt">${fmtAmt(ms)}</span>
+      ${badge}
     </div>`;
   }).join('');
 
   const totalMs = CARDS.reduce((s,c)=>s+monthlySpend(c,month),0);
-  const totalTs = CARDS.reduce((s,c)=>s+totalSpend(c),0);
-
-  document.getElementById('cardSummary').innerHTML = `
-    <div class="summary-row card-row header-row">
-      <div class="cell bold" style="font-size:10px;color:var(--text2)">CARD</div>
-      <div class="cell bold right" style="font-size:10px;color:var(--text2)">THIS MONTH</div>
-      <div class="cell bold right" style="font-size:10px;color:var(--text2)">ALL TIME</div>
-      <div class="cell bold center" style="font-size:10px;color:var(--text2)">STATUS</div>
-    </div>
-    ${cardRows}
-    <div class="summary-row card-row total-row">
-      <div class="cell bold">TOTAL</div>
-      <div class="cell mono right">${fmtAmt(totalMs)}</div>
-      <div class="cell mono right">${fmtAmt(totalTs)}</div>
-      <div class="cell"></div>
+  document.getElementById('cardSummary').innerHTML = cardRows + `
+    <div class="dash-total-row">
+      <span class="dash-total-lbl">TOTAL</span>
+      <span class="dash-total-amt">${fmtAmt(totalMs)}</span>
     </div>`;
+}
+
+function fmtN(n) {
+  if (n >= 100000) return (n/100000).toFixed(1) + 'L';
+  if (n >= 1000)   return (n/1000).toFixed(1) + 'k';
+  return n.toFixed(0);
 }
 
 // ── Transactions ──
