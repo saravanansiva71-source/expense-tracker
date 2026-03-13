@@ -75,8 +75,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .card-row { grid-template-columns: 1.8fr 1fr 1fr 0.8fr; }
 /* Person summary cols: name | monthly | net | returned | remaining */
 .person-row { grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr; }
-.person-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; margin-bottom: 8px; border-left: 3px solid var(--border); }
-.person-card.paid { border-left-color: var(--green); background: rgba(74,222,128,0.04); }
 .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px; }
 .modal-overlay.show { display:flex; }
 .modal { background:var(--surface);border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;border:1px solid var(--border); }
@@ -87,13 +85,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .modal-btns button { flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none; }
 .btn-save { background:var(--accent);color:#fff; }
 .btn-cancel { background:var(--surface2);color:var(--text2);border:1px solid var(--border) !important; }
-.person-card.unpaid { border-left-color: var(--accent2); background: rgba(255,107,138,0.04); }
-.person-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.person-name { font-size: 14px; font-weight: 700; }
-.person-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-.person-stat { text-align: center; }
-.person-stat .ps-label { font-size: 9px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
-.person-stat .ps-value { font-size: 13px; font-weight: 800; letter-spacing: -0.3px; }
+/* Option C — person row styles */
+.person-row-item { display:flex; gap:10px; margin-bottom:8px; align-items:flex-start; }
+.person-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; margin-top:2px; }
+.person-body { flex:1; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius); padding:10px 13px; }
+.person-body.paid { border-left-color:var(--green); background:rgba(74,222,128,0.04); }
+.person-body.unpaid { border-left-color:var(--accent2); background:rgba(255,107,138,0.04); }
+.person-body.nospend { opacity:0.5; }
+.person-row-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+.person-name { font-size:14px; font-weight:700; }
+.person-amt { font-size:15px; font-weight:800; letter-spacing:-0.3px; }
+.person-meta { font-size:11px; color:var(--text2); margin-bottom:7px; line-height:1.5; }
+.person-progress { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.person-progress-fill { height:3px; border-radius:2px; transition:width 0.5s ease; }
 
 /* STATUS BADGES */
 .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
@@ -349,6 +353,12 @@ textarea { resize: none; height: 72px; }
       <label>Month:</label>
       <select id="peopleMonth" onchange="renderPeople()"></select>
     </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button id="toggleInactiveBtn" onclick="toggleInactive()"
+        style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer">
+        Show inactive
+      </button>
+    </div>
     <div id="peopleSummary"></div>
   </div>
 </div>
@@ -513,7 +523,10 @@ let txFilter = 'All';
 // ── Months list ──
 function getMonths() {
   const months = [];
-  for (let y = 2025; y <= 2027; y++)
+  const now = new Date();
+  // Start from Jan-2026, go 2 years ahead of current month
+  const endYear = now.getFullYear() + 2;
+  for (let y = 2026; y <= endYear; y++)
     for (let m = 0; m < 12; m++) {
       const d = new Date(y, m, 1);
       months.push(d.toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-'));
@@ -988,94 +1001,114 @@ async function deleteTx(id) {
 }
 
 // ── People ──
+let showInactive = false;
+
+function toggleInactive() {
+  showInactive = !showInactive;
+  const btn = document.getElementById('toggleInactiveBtn');
+  if (showInactive) {
+    btn.textContent = 'Hide inactive';
+    btn.style.background = 'rgba(124,110,245,0.12)';
+    btn.style.color = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+  } else {
+    btn.textContent = 'Show inactive';
+    btn.style.background = 'var(--surface2)';
+    btn.style.color = 'var(--text2)';
+    btn.style.borderColor = 'var(--border)';
+  }
+  renderPeople();
+}
 function renderPeople() {
   const month = document.getElementById('peopleMonth').value;
   const container = document.getElementById('peopleSummary');
 
-  const totalMs = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+personMonthlySpend(p,month),0);
+  const totalMs  = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+personMonthlySpend(p,month),0);
   const totalNet = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+Math.max(0,personNetOutstanding(p)),0);
   const totalRet = PERSONS.filter(p=>p!=='Cashback').reduce((s,p)=>s+personReturnedThisMonth(p,month),0);
   const cb = totalCashback();
 
-  // Cashback card first
-  const cashbackCard = `
-    <div class="person-card paid">
-      <div class="person-card-top">
-        <span class="person-name">💎 Cashback</span>
-        <span class="badge paid">Earned</span>
-      </div>
-      <div class="person-stats">
-        <div class="person-stat">
-          <div class="ps-label">Total Earned</div>
-          <div class="ps-value" style="color:var(--green)">${fmtAmt(cb)}</div>
-        </div>
-        <div class="person-stat"><div class="ps-label">Monthly</div><div class="ps-value" style="color:var(--text2)">—</div></div>
-        <div class="person-stat"><div class="ps-label">Returned</div><div class="ps-value" style="color:var(--text2)">—</div></div>
-      </div>
-    </div>`;
+  const avatarPalettes = [
+    {bg:'#E6F1FB',color:'#185FA5'},{bg:'#EAF3DE',color:'#3B6D11'},
+    {bg:'#FAEEDA',color:'#854F0B'},{bg:'#FBEAF0',color:'#993556'},
+    {bg:'#EEEDFE',color:'#534AB7'},{bg:'#E1F5EE',color:'#0F6E56'},
+    {bg:'#FAECE7',color:'#993C1D'},{bg:'#F1EFE8',color:'#5F5E5A'},
+  ];
+  const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 
-  // Person cards
-  const personCards = PERSONS.filter(p=>p!=='Cashback').map(p => {
-    const ms = personMonthlySpend(p, month);
+  function personRow(p, idx) {
+    const pal = avatarPalettes[idx % avatarPalettes.length];
+    const ms  = personMonthlySpend(p, month);
     const net = personNetOutstanding(p);
     const ret = personReturnedThisMonth(p, month);
-    const st = personStatus(p, month);
+    const st  = personStatus(p, month);
 
-    if (ms === 0 && net === 0 && ret === 0) return ''; // hide people with no activity
+    if (!showInactive && ms === 0 && net === 0 && ret === 0) return '';
 
-    const cardClass = st==='paid' ? 'paid' : st==='unpaid' ? 'unpaid' : '';
-    const netColor = net > 0 ? 'var(--orange)' : net < 0 ? 'var(--green)' : 'var(--text2)';
-    const badge = st==='paid'
+    const isInactive = ms === 0 && net === 0 && ret === 0;
+    const bodyClass = isInactive ? 'nospend' : st==='paid' ? 'paid' : st==='unpaid' ? 'unpaid' : 'nospend';
+    const amtColor  = isInactive ? 'var(--text2)' : st==='paid' ? 'var(--green)' : st==='unpaid' ? 'var(--accent2)' : 'var(--text2)';
+    const badge = isInactive
+      ? `<span class="badge nospend">No activity</span>`
+      : st==='paid'
       ? `<span class="badge paid">✓ Paid</span>`
       : st==='unpaid'
       ? `<span class="badge unpaid">✗ Unpaid</span>`
-      : `<span class="badge nospend">No Spend</span>`;
+      : `<span class="badge nospend">— No Spend</span>`;
 
-    return `<div class="person-card ${cardClass}">
-      <div class="person-card-top">
-        <span class="person-name">👤 ${p}</span>
-        ${badge}
-      </div>
-      <div class="person-stats">
-        <div class="person-stat">
-          <div class="ps-label">This Month</div>
-          <div class="ps-value" style="color:${ms>0?'var(--accent2)':'var(--text2)'}">${ms>0?fmtAmt(ms):'—'}</div>
+    const pct = ms > 0 ? Math.min(100, Math.round((ret / ms) * 100)) : 0;
+    const barColor = st==='paid' ? 'var(--green)' : st==='unpaid' ? 'var(--accent2)' : 'var(--border)';
+
+    const metaParts = [];
+    if (ms > 0)    metaParts.push(`Spend ${fmtAmt(ms)}`);
+    if (net !== 0) metaParts.push(`Net due ${fmtAmt(Math.abs(net))}${net < 0 ? ' (you owe)' : ''}`);
+    if (ret > 0)   metaParts.push(`Returned ${fmtAmt(ret)}`);
+
+    return `<div class="person-row-item">
+      <div class="person-avatar" style="background:${pal.bg};color:${pal.color}">${initials(p)}</div>
+      <div class="person-body ${bodyClass}">
+        <div class="person-row-top">
+          <span class="person-name">${p}</span>
+          <span class="person-amt" style="color:${amtColor}">${ms > 0 ? fmtAmt(ms) : '—'}</span>
         </div>
-        <div class="person-stat">
-          <div class="ps-label">Net Due</div>
-          <div class="ps-value" style="color:${netColor}">${net!==0?fmtAmt(net):'—'}</div>
-        </div>
-        <div class="person-stat">
-          <div class="ps-label">Returned</div>
-          <div class="ps-value" style="color:${ret>0?'var(--green)':'var(--text2)'}">${ret>0?fmtAmt(ret):'—'}</div>
+        <div class="person-meta">${metaParts.join(' · ') || 'No activity this month'} ${badge}</div>
+        <div class="person-progress">
+          <div class="person-progress-fill" style="width:${pct}%;background:${barColor}"></div>
         </div>
       </div>
     </div>`;
-  }).join('');
+  }
 
-  // Total summary card
-  const totalCard = `
-    <div class="person-card" style="background:rgba(124,110,245,0.08);border-left-color:var(--accent)">
-      <div class="person-card-top">
-        <span class="person-name" style="color:var(--accent)">📊 TOTAL</span>
+  const cashbackRow = `<div class="person-row-item">
+    <div class="person-avatar" style="background:#FAEEDA;color:#854F0B">CB</div>
+    <div class="person-body paid">
+      <div class="person-row-top">
+        <span class="person-name">Cashback</span>
+        <span class="person-amt" style="color:var(--green)">${fmtAmt(cb)}</span>
       </div>
-      <div class="person-stats">
-        <div class="person-stat">
-          <div class="ps-label">This Month</div>
-          <div class="ps-value" style="color:var(--accent2)">${fmtAmt(totalMs)}</div>
-        </div>
-        <div class="person-stat">
-          <div class="ps-label">Net Due</div>
-          <div class="ps-value" style="color:var(--orange)">${fmtAmt(totalNet)}</div>
-        </div>
-        <div class="person-stat">
-          <div class="ps-label">Returned</div>
-          <div class="ps-value" style="color:var(--green)">${fmtAmt(totalRet)}</div>
-        </div>
-      </div>
-    </div>`;
+      <div class="person-meta">Total earned across all cards <span class="badge paid">Earned</span></div>
+      <div class="person-progress"><div class="person-progress-fill" style="width:100%;background:var(--green)"></div></div>
+    </div>
+  </div>`;
 
-  container.innerHTML = cashbackCard + personCards + totalCard;
+  const personRows = PERSONS.filter(p=>p!=='Cashback').map((p,i) => personRow(p, i)).join('');
+
+  const totalPct = totalMs > 0 ? Math.min(100, Math.round((totalRet/totalMs)*100)) : 0;
+  const totalRow = `<div class="person-row-item" style="margin-top:4px">
+    <div class="person-avatar" style="background:rgba(124,110,245,0.15);color:var(--accent);font-size:11px">ALL</div>
+    <div class="person-body" style="border-left-color:var(--accent);background:rgba(124,110,245,0.05)">
+      <div class="person-row-top">
+        <span class="person-name" style="color:var(--accent)">Total</span>
+        <span class="person-amt" style="color:var(--accent)">${fmtAmt(totalMs)}</span>
+      </div>
+      <div class="person-meta">Net due ${fmtAmt(totalNet)} · Returned ${fmtAmt(totalRet)}</div>
+      <div class="person-progress">
+        <div class="person-progress-fill" style="width:${totalPct}%;background:var(--accent)"></div>
+      </div>
+    </div>
+  </div>`;
+
+  container.innerHTML = cashbackRow + personRows + totalRow;
 }
 
 // ── Toast ──
