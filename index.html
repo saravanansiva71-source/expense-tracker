@@ -553,31 +553,7 @@ function selCat(el) {
   document.getElementById('fCat').value = el.dataset.c;
   document.getElementById('pfmField').classList.toggle('show', REFUND_CATS.includes(el.dataset.c)||el.dataset.c==='Loan Repaid');
 }
-function getBillingMonth(card, date) {
-  const billDay = billCycles[card];
 
-  // Non-credit cards → normal month
-  if (!billDay) {
-    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', '-');
-  }
-
-  const day = date.getDate();
-  let month = date.getMonth();
-  let year = date.getFullYear();
-
-  // If date >= billing day → next month
-  if (day >= billDay) {
-    month += 1;
-    if (month > 11) {
-      month = 0;
-      year += 1;
-    }
-  }
-
-  return new Date(year, month, 1)
-    .toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
-    .replace(' ', '-');
-}
 async function addTransaction() {
   const cat=document.getElementById('fCat').value, amt=parseFloat(document.getElementById('fAmt').value),
         card=document.getElementById('fCard').value, person=document.getElementById('fPerson').value,
@@ -587,7 +563,7 @@ async function addTransaction() {
   const d=new Date(date);
   const tx={id:Date.now()+'_'+Math.floor(Math.random()*99999),
     date:d.toLocaleDateString('en-GB'), dateRaw:date, cat, amt, card, person, notes,
-    month: getBillingMonth(card, d),
+    month:d.toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-'),
     pfm:pfm||'', dueStatus:REFUND_CATS.includes(cat)?(pfm?`✓ Settled for ${pfm}`:'⚠ Month missing'):'',
   };
   transactions.push(tx);
