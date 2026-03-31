@@ -490,7 +490,12 @@ function sheetGet(params) {
   return new Promise((res,rej) => {
     const cb = 'gs_' + Date.now();
     const s  = document.createElement('script');
-    s.src = SHEET_URL + '?' + buildQS({...params, callback:cb, t:Date.now()});
+    s.src = SHEET_URL + '?' + buildQS({
+  ...params,
+  key: 'my_super_secret_123',
+  callback: cb,
+  t: Date.now()
+});
     const t = setTimeout(() => { cleanup(); rej(new Error('Timeout')); }, 15000);
     function cleanup() { clearTimeout(t); delete window[cb]; s.parentNode && s.parentNode.removeChild(s); }
     window[cb] = d => { cleanup(); res(d); };
@@ -553,7 +558,14 @@ function selCat(el) {
   document.getElementById('fCat').value = el.dataset.c;
   document.getElementById('pfmField').classList.toggle('show', REFUND_CATS.includes(el.dataset.c)||el.dataset.c==='Loan Repaid');
 }
+const APP_PASSWORD = "9894";
 
+const entered = document.getElementById("appPassword").value;
+
+if (entered !== APP_PASSWORD) {
+  showToast("❌ Wrong password", "warn");
+  return;
+}
 async function addTransaction() {
   const cat=document.getElementById('fCat').value, amt=parseFloat(document.getElementById('fAmt').value),
         card=document.getElementById('fCard').value, person=document.getElementById('fPerson').value,
@@ -563,7 +575,7 @@ async function addTransaction() {
   const d=new Date(date);
   const tx={id:Date.now()+'_'+Math.floor(Math.random()*99999),
     date:d.toLocaleDateString('en-GB'), dateRaw:date, cat, amt, card, person, notes,
-    month: getBillingMonth(card, d),
+    month:d.toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-'),
     pfm:pfm||'', dueStatus:REFUND_CATS.includes(cat)?(pfm?`✓ Settled for ${pfm}`:'⚠ Month missing'):'',
   };
   transactions.push(tx);
@@ -572,31 +584,6 @@ async function addTransaction() {
   await saveData(); await addToSheet(tx);
   btn.textContent='+ Add Transaction'; btn.disabled=false;
   resetForm();
-}
-function getBillingMonth(card, date) {
-  const billDay = billCycles[card];
-
-  // Non-credit cards → normal month
-  if (!billDay) {
-    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', '-');
-  }
-
-  const day = date.getDate();
-  let month = date.getMonth();
-  let year = date.getFullYear();
-
-  // If date >= billing day → next month
-  if (day >= billDay) {
-    month += 1;
-    if (month > 11) {
-      month = 0;
-      year += 1;
-    }
-  }
-
-  return new Date(year, month, 1)
-    .toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
-    .replace(' ', '-');
 }
 function resetForm() {
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('sel'));
