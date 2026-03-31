@@ -563,7 +563,7 @@ async function addTransaction() {
   const d=new Date(date);
   const tx={id:Date.now()+'_'+Math.floor(Math.random()*99999),
     date:d.toLocaleDateString('en-GB'), dateRaw:date, cat, amt, card, person, notes,
-    month:d.toLocaleDateString('en-IN',{month:'short',year:'numeric'}).replace(' ','-'),
+    month: getBillingMonth(card, d),
     pfm:pfm||'', dueStatus:REFUND_CATS.includes(cat)?(pfm?`✓ Settled for ${pfm}`:'⚠ Month missing'):'',
   };
   transactions.push(tx);
@@ -572,6 +572,31 @@ async function addTransaction() {
   await saveData(); await addToSheet(tx);
   btn.textContent='+ Add Transaction'; btn.disabled=false;
   resetForm();
+}
+function getBillingMonth(card, date) {
+  const billDay = billCycles[card];
+
+  // Non-credit cards → normal month
+  if (!billDay) {
+    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', '-');
+  }
+
+  const day = date.getDate();
+  let month = date.getMonth();
+  let year = date.getFullYear();
+
+  // If date >= billing day → next month
+  if (day >= billDay) {
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+  }
+
+  return new Date(year, month, 1)
+    .toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+    .replace(' ', '-');
 }
 function resetForm() {
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('sel'));
